@@ -22,8 +22,7 @@ namespace RPG.Control
             foreach (RaycastHit hit in hits)
             {
                 CombatTarget target = hit.transform.GetComponent<CombatTarget>();
-                if (target == null) continue; //TODO change this later. continue keyword is bad. When changing this MAKE SURE TO CHECK RETURN!!
-
+                if (!GetComponent<Fighter>().CanAttack(target)) continue; //TODO change this later. continue keyword is bad. When changing this MAKE SURE TO CHECK RETURN!!
 
                 if (Input.GetMouseButtonDown(0))
                 {
