@@ -1,4 +1,5 @@
-﻿using RPG.Movement;
+﻿using RPG.Combat;
+using RPG.Movement;
 using UnityEngine;
 
 namespace RPG.Control
@@ -7,22 +8,51 @@ namespace RPG.Control
     {
         private void Update()
         {
-            if (Input.GetMouseButton(0))
-            {
-                MoveToCursor();
-            }
+            if (InteractWithCombat())
+                return;
+
+            if (InteractWithMovement())
+                return;
         }
 
-        private void MoveToCursor()
+        private bool InteractWithCombat()
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit[] hits = Physics.RaycastAll(GetMouseRay());
+
+            foreach (RaycastHit hit in hits)
+            {
+                CombatTarget target = hit.transform.GetComponent<CombatTarget>();
+                if (target == null) continue; //TODO change this later. continue keyword is bad. When changing this MAKE SURE TO CHECK RETURN!!
+
+
+                if (Input.GetMouseButtonDown(0))
+                {
+                    GetComponent<Fighter>().Attack(target);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool InteractWithMovement()
+        {
             RaycastHit hit;
-            bool hasHit = Physics.Raycast(ray, out hit); //out outputs the information to hit
+            bool hasHit = Physics.Raycast(GetMouseRay(), out hit); //out outputs the information to hit
 
             if (hasHit)
             {
-                GetComponent<Mover>().MoveTo(hit.point);
+                if (Input.GetMouseButton(0))
+                {
+                    GetComponent<Mover>().StartMoveAction(hit.point);
+                }
+                return true;
             }
+            return false;
+        }
+
+        private static Ray GetMouseRay()
+        {
+            return Camera.main.ScreenPointToRay(Input.mousePosition);
         }
     }
 }
