@@ -39,7 +39,7 @@ namespace RPG.Control
                     continue; //TODO change this later. continue keyword is bad. When changing this MAKE SURE TO CHECK RETURN!!
                 }
 
-                if (Input.GetMouseButtonDown(0))
+                if (Input.GetMouseButton(0))
                 {
                     GetComponent<Fighter>().Attack(target.gameObject);
                 }
