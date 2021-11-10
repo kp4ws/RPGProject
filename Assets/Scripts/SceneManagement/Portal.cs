@@ -2,6 +2,7 @@
 using UnityEngine.SceneManagement;
 using System.Collections;
 using UnityEngine.AI;
+using RPG.Saving;
 
 namespace RPG.SceneManagement
 {
@@ -40,10 +41,18 @@ namespace RPG.SceneManagement
             Fader fader = FindObjectOfType<Fader>();
 
             yield return fader.FadeOut(fadeOutTime);
+
+            SavingWrapper wrapper = FindObjectOfType<SavingWrapper>();
+
+            wrapper.Save();
             yield return SceneManager.LoadSceneAsync(sceneToLoad);
+            wrapper.Load();
 
             Portal otherPortal = GetOtherPortal();
+
+            //Overrides the *saved* position for the player (which is correct)
             UpdatePlayer(otherPortal);
+            wrapper.Save();
 
             yield return new WaitForSeconds(fadeWaitTime);
             yield return fader.FadeIn(fadeInTime);
