@@ -6,12 +6,19 @@ namespace RPG.Combat
 {
     public class Fighter : MonoBehaviour, IAction
     {
-        [SerializeField] private float weaponRange = 2f;
         [SerializeField] private float timeBetweenAttacks = 1f;
-        [SerializeField] private float weaponDamage = 5f;
+        [SerializeField] private Transform rightHandTransform = null;
+        [SerializeField] private Transform leftHandTransform = null;
+        [SerializeField] Weapon defaultWeapon = null;
 
         private Health target;
         private float timeSinceLastAttack = Mathf.Infinity;
+        private Weapon currentWeapon = null;
+
+        private void Start()
+        {
+            EquipWeapon(defaultWeapon);
+        }
 
         private void Update()
         {
@@ -30,6 +37,19 @@ namespace RPG.Combat
                 transform.LookAt(target.transform);
                 AttackBehaviour();
             }
+        }
+
+        public void EquipWeapon(Weapon weapon)
+        {
+            if(weapon == null)
+            {
+                Debug.LogError("Weapon has not been set: " + gameObject.name);
+                return;
+            }
+
+            currentWeapon = weapon;
+            Animator animator = GetComponent<Animator>();
+            weapon.Spawn(rightHandTransform, leftHandTransform, animator); 
         }
 
         private void AttackBehaviour()
@@ -53,12 +73,12 @@ namespace RPG.Combat
         {
             if (target == null)
                 return;
-            target.TakeDamage(weaponDamage);
+            target.TakeDamage(currentWeapon.GetWeaponDamage());
         }
 
         private bool IsInRange()
         {
-            return Vector3.Distance(transform.position, target.transform.position) < weaponRange;
+            return Vector3.Distance(transform.position, target.transform.position) < currentWeapon.GetWeaponRange();
         }
 
         public bool CanAttack(GameObject combatTarget)
