@@ -1,10 +1,11 @@
 using UnityEngine;
 using RPG.Movement;
 using RPG.Core;
+using RPG.Saving;
 
 namespace RPG.Combat
 {
-    public class Fighter : MonoBehaviour, IAction
+    public class Fighter : MonoBehaviour, IAction, ISaveable
     {
         [SerializeField] private float timeBetweenAttacks = 1f;
         [SerializeField] private Transform rightHandTransform = null;
@@ -15,9 +16,19 @@ namespace RPG.Combat
         private float timeSinceLastAttack = Mathf.Infinity;
         private Weapon currentWeapon = null;
 
+        /// <summary>
+        /// 
+        /// TODO:
+        /// Add comments to all scripts to understand them better before starting on Unity game
+        /// 
+        /// </summary>
+
         private void Start()
         {
-            EquipWeapon(defaultWeapon);
+            if (currentWeapon == null)
+            {
+                EquipWeapon(defaultWeapon);
+            }
         }
 
         private void Update()
@@ -29,6 +40,7 @@ namespace RPG.Combat
 
             if (!IsInRange())
             {
+                StopAttack();
                 GetComponent<Mover>().MoveTo(target.transform.position, 1f);
             }
             else
@@ -41,7 +53,7 @@ namespace RPG.Combat
 
         public void EquipWeapon(Weapon weapon)
         {
-            if(weapon == null)
+            if (weapon == null)
             {
                 Debug.LogError("Weapon has not been set: " + gameObject.name);
                 return;
@@ -49,7 +61,7 @@ namespace RPG.Combat
 
             currentWeapon = weapon;
             Animator animator = GetComponent<Animator>();
-            weapon.Spawn(rightHandTransform, leftHandTransform, animator); 
+            weapon.Spawn(rightHandTransform, leftHandTransform, animator);
         }
 
         private void AttackBehaviour()
@@ -73,7 +85,20 @@ namespace RPG.Combat
         {
             if (target == null)
                 return;
-            target.TakeDamage(currentWeapon.GetWeaponDamage());
+
+            if (currentWeapon.HasProjectile())
+            {
+                currentWeapon.LaunchProjectile(rightHandTransform, leftHandTransform, target);
+            }
+            else
+            {
+                target.TakeDamage(currentWeapon.GetWeaponDamage());
+            }
+        }
+
+        private void Shoot()
+        {
+            Hit();
         }
 
         private bool IsInRange()
@@ -105,6 +130,18 @@ namespace RPG.Combat
         {
             GetComponent<Animator>().ResetTrigger("attack");
             GetComponent<Animator>().SetTrigger("stopAttack");
+        }
+
+        public object CaptureState()
+        {
+            return currentWeapon.name; //This will be expanded upon in part 2 for Inventory
+        }
+
+        public void RestoreState(object state)
+        {
+            string weaponName = (string)state;
+            Weapon weapon = Resources.Load<Weapon>(weaponName);
+            EquipWeapon(weapon);
         }
     }
 
