@@ -2,6 +2,7 @@ using UnityEngine;
 using RPG.Movement;
 using RPG.Core;
 using RPG.Saving;
+using RPG.Attributes;
 
 namespace RPG.Combat
 {
@@ -13,6 +14,7 @@ namespace RPG.Combat
         [SerializeField] Weapon defaultWeapon = null;
 
         private Health target;
+        private Animator animator; //Not part of the lecture
         private float timeSinceLastAttack = Mathf.Infinity;
         private Weapon currentWeapon = null;
 
@@ -25,6 +27,7 @@ namespace RPG.Combat
 
         private void Start()
         {
+            animator = GetComponent<Animator>();
             if (currentWeapon == null)
             {
                 EquipWeapon(defaultWeapon);
@@ -36,11 +39,17 @@ namespace RPG.Combat
             timeSinceLastAttack += Time.deltaTime;
 
             if (target == null) return;
-            if (target.IsDead()) return; //Change this into 1 if statement?
+            if (target.IsDead()) return; 
 
             if (!IsInRange())
             {
-                StopAttack();
+                //Stops player and enemy from jittering while attacking and target is moving away
+                if (animator.GetCurrentAnimatorStateInfo(0).IsTag("Attack"))
+                {
+                    if (gameObject.tag == "Player") return;
+                    animator.SetTrigger("stopAttack"); //TODO call StopAttack method instead?
+                }
+
                 GetComponent<Mover>().MoveTo(target.transform.position, 1f);
             }
             else
@@ -60,8 +69,12 @@ namespace RPG.Combat
             }
 
             currentWeapon = weapon;
-            Animator animator = GetComponent<Animator>();
             weapon.Spawn(rightHandTransform, leftHandTransform, animator);
+        }
+
+        public Health GetTarget()
+        {
+            return target;
         }
 
         private void AttackBehaviour()
@@ -76,8 +89,8 @@ namespace RPG.Combat
 
         private void TriggerAttack()
         {
-            GetComponent<Animator>().ResetTrigger("stopAttack");
-            GetComponent<Animator>().SetTrigger("attack");
+            animator.ResetTrigger("stopAttack");
+            animator.SetTrigger("attack");
         }
 
         //Animation Event
@@ -88,11 +101,11 @@ namespace RPG.Combat
 
             if (currentWeapon.HasProjectile())
             {
-                currentWeapon.LaunchProjectile(rightHandTransform, leftHandTransform, target);
+                currentWeapon.LaunchProjectile(rightHandTransform, leftHandTransform, target, gameObject);
             }
             else
             {
-                target.TakeDamage(currentWeapon.GetWeaponDamage());
+                target.TakeDamage(gameObject, currentWeapon.GetWeaponDamage());
             }
         }
 
@@ -128,8 +141,8 @@ namespace RPG.Combat
 
         private void StopAttack()
         {
-            GetComponent<Animator>().ResetTrigger("attack");
-            GetComponent<Animator>().SetTrigger("stopAttack");
+            animator.ResetTrigger("attack");
+            animator.SetTrigger("stopAttack");
         }
 
         public object CaptureState()

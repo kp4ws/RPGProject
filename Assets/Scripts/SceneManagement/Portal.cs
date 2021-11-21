@@ -2,7 +2,7 @@
 using UnityEngine.SceneManagement;
 using System.Collections;
 using UnityEngine.AI;
-using RPG.Saving;
+using RPG.Saving; //TODO Is this not needed?
 
 namespace RPG.SceneManagement
 {
@@ -56,11 +56,9 @@ namespace RPG.SceneManagement
 
             yield return new WaitForSeconds(fadeWaitTime);
             yield return fader.FadeIn(fadeInTime);
+
             
-            //TODO bug fix
-            //
-            //  If previous portal doesn't get destroyed before walking into next portal, you get stuck in infinite void
-            //
+           
             Destroy(gameObject);
         }
 
@@ -85,3 +83,8 @@ namespace RPG.SceneManagement
         }
     }
 }
+
+//TODO bug fix
+//
+//  If previous portal doesn't get destroyed before walking into next portal, you get stuck in infinite void
+//
