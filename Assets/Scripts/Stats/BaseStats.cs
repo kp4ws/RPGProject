@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using GameDevTV.Utils;
 
 namespace RPG.Stats
 {
@@ -8,44 +10,117 @@ namespace RPG.Stats
         [SerializeField] int startingLevel = 1;
         [SerializeField] CharacterClass characterClass;
         [SerializeField] Progression progression = null;
+        [SerializeField] GameObject levelUpParticleEffect = null;
+        [SerializeField] bool shouldUseModifiers = false;
 
-        private int currentLevel = 0;
+
+        public event Action onLevelUp;
+
+        private LazyValue<int> currentLevel;
+
+        private Experience experience;
+
+        private void Awake()
+        {
+            experience = GetComponent<Experience>();
+            currentLevel = new LazyValue<int>(CalculateLevel);
+        }
 
         private void Start()
         {
-            currentLevel = GetLevel();
-            Experience experience = GetComponent<Experience>();
-            if(experience != null)
+            currentLevel.ForceInit();
+        }
+
+        //Best practice for registering callbacks is OnEnable
+        //Gets called after Awake
+        //Should not use external functions in here (just like Awake)
+        private void OnEnable()
+        {
+            if (experience != null)
             {
                 experience.onExperienceGained += UpdateLevel;
+            }
+        }
+        
+        private void OnDisable()
+        {
+            if (experience != null)
+            {
+                experience.onExperienceGained -= UpdateLevel;
             }
         }
 
         private void UpdateLevel()
         {
-            int newLevel = GetLevel();
-            if(newLevel > currentLevel)
+            int newLevel = CalculateLevel();
+
+            if (newLevel > currentLevel.value)
             {
-                currentLevel = newLevel;
+                currentLevel.value = newLevel;
+                LevelUpEffect();
+                onLevelUp();
             }
         }
 
+        private void LevelUpEffect()
+        {
+            Instantiate(levelUpParticleEffect, transform);
+        }
+
         public float GetStat(Stat stat)
+        {
+            return GetBaseStat(stat) + GetAdditiveModifier(stat) * (1 + GetPercentageModifier(stat) / 100); //Multiplying by 1.1
+        }
+
+        private float GetBaseStat(Stat stat)
         {
             return progression.GetStat(stat, characterClass, GetLevel());
         }
 
         public int GetLevel()
         {
-            if(currentLevel < 1)
-            {
-                currentLevel = CalculateLevel();
-            }
+            //NO LONGER NEED TO DO THIS WITH LAZY INITIALIZATION
+            //if(currentLevel.value < 1)
+            //{ 
+            //    currentLevel.value = CalculateLevel();
+            //}
 
-            return currentLevel;
+            return currentLevel.value;
         }
 
-        public int CalculateLevel()
+        private float GetAdditiveModifier(Stat stat)
+        {
+            if(!shouldUseModifiers) return 0;
+
+            float total = 0;
+            foreach(IModifierProvider provider in GetComponents<IModifierProvider>())
+            {
+                foreach(float modifier in provider.GetAdditiveModifiers(stat))
+                {
+                    total += modifier;
+                }
+            }
+
+            return total;
+        }
+
+        private float GetPercentageModifier(Stat stat)
+        {
+            if (!shouldUseModifiers) return 0;
+
+            float total = 0;
+            foreach (IModifierProvider provider in GetComponents<IModifierProvider>())
+            {
+                foreach (float modifier in provider.GetPercentageModifiers(stat))
+                {
+                    total += modifier;
+                }
+            }
+
+            return total;
+        }
+
+        private int CalculateLevel()
         {
             Experience experience = GetComponent<Experience>();
             if (experience == null)
