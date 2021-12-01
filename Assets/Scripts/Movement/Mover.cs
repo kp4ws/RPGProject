@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
 using RPG.Core;
+using RPG.Attributes;
 using RPG.Saving;
-using System.Collections.Generic;
 
 namespace RPG.Movement
 {
