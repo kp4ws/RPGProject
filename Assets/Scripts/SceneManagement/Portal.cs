@@ -1,28 +1,30 @@
-﻿using UnityEngine;
-using UnityEngine.SceneManagement;
+﻿using System;
 using System.Collections;
+using RPG.Control;
+using RPG.Saving;
+using UnityEngine;
 using UnityEngine.AI;
-using RPG.Saving; //TODO Is this not needed?
+using UnityEngine.SceneManagement;
 
 namespace RPG.SceneManagement
 {
     public class Portal : MonoBehaviour
     {
-        private enum DestinationIdentifier
+        enum DestinationIdentifier
         {
             A, B, C, D, E
         }
 
-        [SerializeField] private int sceneToLoad = -1;
-        [SerializeField] private Transform spawnPoint;
-        [SerializeField] private DestinationIdentifier destination;
-        [SerializeField] private float fadeOutTime = 0.5f;
-        [SerializeField] private float fadeInTime = 1f;
-        [SerializeField] private float fadeWaitTime = 0.5f;
+        [SerializeField] int sceneToLoad = -1;
+        [SerializeField] Transform spawnPoint;
+        [SerializeField] DestinationIdentifier destination;
+        [SerializeField] float fadeOutTime = 1f;
+        [SerializeField] float fadeInTime = 2f;
+        [SerializeField] float fadeWaitTime = 0.5f;
 
         private void OnTriggerEnter(Collider other)
         {
-            if(other.gameObject.tag == "Player")
+            if (other.tag == "Player")
             {
                 StartCoroutine(Transition());
             }
@@ -30,48 +32,55 @@ namespace RPG.SceneManagement
 
         private IEnumerator Transition()
         {
-            if(sceneToLoad < 0)
+            if (sceneToLoad < 0)
             {
-                Debug.LogError("Scene to load is not set");
+                Debug.LogError("Scene to load not set.");
                 yield break;
             }
 
             DontDestroyOnLoad(gameObject);
 
             Fader fader = FindObjectOfType<Fader>();
+            SavingWrapper savingWrapper = FindObjectOfType<SavingWrapper>();
+            PlayerController playerController = GameObject.FindWithTag("Player").GetComponent<PlayerController>();
+            playerController.enabled = false;
 
             yield return fader.FadeOut(fadeOutTime);
 
-            SavingWrapper wrapper = FindObjectOfType<SavingWrapper>();
+            savingWrapper.Save();
 
-            wrapper.Save();
             yield return SceneManager.LoadSceneAsync(sceneToLoad);
-            wrapper.Load();
+            //New player in new scene
+            PlayerController newPlayerController = GameObject.FindWithTag("Player").GetComponent<PlayerController>();
+            newPlayerController.enabled = false;
+
+
+            savingWrapper.Load();
 
             Portal otherPortal = GetOtherPortal();
-
-            //Overrides the *saved* position for the player (which is correct)
             UpdatePlayer(otherPortal);
-            wrapper.Save();
+
+            savingWrapper.Save();
 
             yield return new WaitForSeconds(fadeWaitTime);
-            yield return fader.FadeIn(fadeInTime);
+            fader.FadeIn(fadeInTime);
 
-            
-           
+            newPlayerController.enabled = true;
             Destroy(gameObject);
         }
 
         private void UpdatePlayer(Portal otherPortal)
         {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            player.GetComponent<NavMeshAgent>().Warp(otherPortal.spawnPoint.position);
+            GameObject player = GameObject.FindWithTag("Player");
+            player.GetComponent<NavMeshAgent>().enabled = false;
+            player.transform.position = otherPortal.spawnPoint.position;
             player.transform.rotation = otherPortal.spawnPoint.rotation;
+            player.GetComponent<NavMeshAgent>().enabled = true;
         }
 
         private Portal GetOtherPortal()
         {
-            foreach(Portal portal in FindObjectsOfType<Portal>())
+            foreach (Portal portal in FindObjectsOfType<Portal>())
             {
                 if (portal == this) continue;
                 if (portal.destination != destination) continue;
@@ -83,8 +92,3 @@ namespace RPG.SceneManagement
         }
     }
 }
-
-//TODO bug fix
-//
-//  If previous portal doesn't get destroyed before walking into next portal, you get stuck in infinite void
-//
